@@ -198,6 +198,10 @@ jobs:
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         cp arch/arm64/configs/vendor/fogos_stock-config arch/arm64/configs/vendor/fogos_defconfig
         sed -i 's/$(error Moto DT w\/o overlay is undefined!!!)/$(warning Moto DT w\/o overlay is undefined!!!)/' arch/arm64/boot/dts/vendor/qcom/Makefile
+        # Fix KernelSU symlink issue
+        rm -rf drivers/kernelsu
+        mkdir -p drivers/kernelsu
+        cp -r KernelSU/kernel/* drivers/kernelsu/
 
     - name: Setup KernelSU
       if: env.ENABLE_KERNELSU == 'true'
