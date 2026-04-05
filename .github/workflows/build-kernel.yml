@@ -1,4 +1,4 @@
-name: Build Kernel for Motorola G45 (fogos)
+name: Build Kernel for Motorola G45 (fogos) with KernelSU + SuSFS
 
 on:
   workflow_dispatch:
@@ -12,8 +12,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: prabhatkrmishra/kernel_motorola_fogos
-          ref: "15.0"        # ← Quotes added (very important!)
+          ref: "15.0"
           path: kernel
+
+      - name: Integrate KernelSU (Fix missing drivers/kernelsu)
+        run: |
+          cd kernel
+          git clone --depth=1 https://github.com/tiann/KernelSU.git kernelsu-temp
+          cp -r kernelsu-temp/kernel/drivers/kernelsu drivers/
+          rm -rf kernelsu-temp
+          echo "KernelSU folder added successfully"
 
       - name: Install Dependencies
         run: |
@@ -28,7 +36,7 @@ jobs:
       - name: Build Kernel
         working-directory: kernel
         run: |
-          echo "=== Building Motorola G45 (fogos) kernel ==="
+          echo "=== Building Motorola G45 (fogos) with KernelSU ==="
           make O=out ARCH=arm64 vendor/fogos_defconfig
           make O=out ARCH=arm64 -j$(nproc) Image
 
@@ -37,10 +45,10 @@ jobs:
           git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
           cp kernel/out/arch/arm64/boot/Image AnyKernel3/
           cd AnyKernel3
-          zip -r9 ../Kernel_fogos.zip * -x .git README.md
+          zip -r9 ../Kernel_fogos_KernelSU.zip * -x .git README.md
 
       - name: Upload Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel_Motorola_G45_fogos
-          path: Kernel_fogos.zip
+          name: Kernel_Motorola_G45_fogos_KernelSU
+          path: Kernel_fogos_KernelSU.zip
