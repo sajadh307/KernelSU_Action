@@ -176,9 +176,11 @@ jobs:
     - name: Download kernel source
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
-        git clone --recursive ${{ env.KERNEL_SOURCE }} -b ${{ env.KERNEL_SOURCE_BRANCH }} android-kernel --depth=1
+        git clone ${{ env.KERNEL_SOURCE }} -b ${{ env.KERNEL_SOURCE_BRANCH }} android-kernel --depth=1
+        cd android-kernel
+        git submodule update --init --recursive
         if [[ ${{ env.ADD_LOCALVERSION_TO_FILENAME }} == 'true' ]]; then
-          echo "LOCALVERSION=$(cat android-kernel/localversion)" >> $GITHUB_ENV
+          echo "LOCALVERSION=$(cat localversion)" >> $GITHUB_ENV
         else
           echo "LOCALVERSION=" >> $GITHUB_ENV
         fi
@@ -198,10 +200,8 @@ jobs:
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         cp arch/arm64/configs/vendor/fogos_stock-config arch/arm64/configs/vendor/fogos_defconfig
         sed -i 's/$(error Moto DT w\/o overlay is undefined!!!)/$(warning Moto DT w\/o overlay is undefined!!!)/' arch/arm64/boot/dts/vendor/qcom/Makefile
-        echo "=== KernelSU folder ===" && ls KernelSU/kernel/ || echo "KernelSU folder empty"
-        echo "=== drivers/kernelsu ===" && ls drivers/kernelsu/ || echo "No drivers/kernelsu"
-        echo "=== app_profile.h location ===" && find . -name "app_profile.h" 2>/dev/null | head -5
-
+        cp -r KernelSU/kernel/* drivers/kernelsu/ 2>/dev/null || true
+        
     - name: Setup KernelSU
       if: env.ENABLE_KERNELSU == 'true'
       run: |
