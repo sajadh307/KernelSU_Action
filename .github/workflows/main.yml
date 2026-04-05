@@ -1,0 +1,48 @@
+name: Build Kernel for Motorola G45 (fogos)
+
+on:
+  workflow_dispatch:   # Allows you to run it manually from Actions tab
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Kernel Source
+        uses: actions/checkout@v4
+        with:
+          repository: prabhatkrmishra/kernel_motorola_fogos
+          ref: 15.0
+          path: kernel_workspace/android-kernel
+
+      - name: Setup Build Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev git ccache dwarves python3
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.ref }}-fogos
+
+      - name: Build Kernel
+        working-directory: kernel_workspace/android-kernel
+        run: |
+          echo "Starting build for fogos..."
+          export PATH="/usr/lib/ccache:$PATH"
+          export USE_CCACHE=1
+          make O=out ARCH=arm64 vendor/fogos_defconfig
+          make O=out ARCH=arm64 -j$(nproc) Image
+
+      - name: Prepare AnyKernel3
+        run: |
+          git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
+          cp kernel_workspace/android-kernel/out/arch/arm64/boot/Image AnyKernel3/
+
+      - name: Upload Kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel_for_Motorola_G45_fogos
+          path: AnyKernel3/
