@@ -248,22 +248,17 @@ jobs:
         key: build-kernel-${{ env.DEVICE }}${{ env.LOCALVERSION }}${{ env.UPLOADNAME }}
         max-size: 2G
 
-    - name: Build kernel
-      run: |
-        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/bin:$PATH
-        export KBUILD_BUILD_HOST=Github-Action
-        export KBUILD_BUILD_USER=$(echo ${{ github.actor }} | tr A-Z a-z)
-        if [ ! -z ${{ env.KSU_EXPECTED_SIZE }} ] && [ ! -z ${{ env.KSU_EXPECTED_HASH }} ]; then
-          export KSU_EXPECTED_SIZE=${{ env.KSU_EXPECTED_SIZE }}
-          export KSU_EXPECTED_HASH=${{ env.KSU_EXPECTED_HASH }}
-        fi
-        make -j$(nproc --all) CC=clang O=out ARCH=${{ env.ARCH }} ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.GCC_64 }} ${{ env.GCC_32 }} ${{ env.KERNEL_CONFIG }}
-        if [ ${{ env.ENABLE_CCACHE }} = true ]; then
-            make -j$(nproc --all) CC="ccache clang" O=out ARCH=${{ env.ARCH }} ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.GCC_64 }} ${{ env.GCC_32 }}
-        else
-            make -j$(nproc --all) CC=clang O=out ARCH=${{ env.ARCH }} ${{ env.CUSTOM_CMDS }} ${{ env.EXTRA_CMDS }} ${{ env.GCC_64 }} ${{ env.GCC_32 }}
-        fi
+    - name: Build Kernel
+  run: |
+    echo "Fixing KernelSU broken hooks..."
+
+    # Remove KernelSU broken hooks
+    find . -type f -exec sed -i 's/ksu_vfs_read_hook/\/\/ksu_vfs_read_hook/g' {} +
+    find . -type f -exec sed -i 's/ksu_input_hook/\/\/ksu_input_hook/g' {} +
+
+    echo "Starting kernel build..."
+
+    make -j$(nproc)
 
     - name: Check a kernel output files
       run: |
