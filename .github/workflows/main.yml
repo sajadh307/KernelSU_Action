@@ -1,0 +1,144 @@
+name: Build Kernel
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Kernel by ${{ github.actor }}
+    runs-on: ubuntu-22.04
+
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Prepare Configuration
+      run: |
+        CONFIG_ENV=$(grep -w "CONFIG_ENV" config.env | head -n 1 | cut -d "=" -f 2)
+
+        CONFIG_LIST=(
+            KERNEL_SOURCE
+            KERNEL_SOURCE_BRANCH
+            KERNEL_CONFIG
+            KERNEL_IMAGE_NAME
+            ARCH
+            ADD_LOCALVERSION_TO_FILENAME
+            EXTRA_CMDS
+            USE_CUSTOM_CLANG
+            CUSTOM_CLANG_SOURCE
+            CUSTOM_CLANG_BRANCH
+            CUSTOM_CMDS
+            CLANG_BRANCH
+            CLANG_VERSION
+            ENABLE_GCC_ARM64
+            ENABLE_GCC_ARM32
+            USE_CUSTOM_GCC_64
+            CUSTOM_GCC_64_SOURCE
+            CUSTOM_GCC_64_BRANCH
+            CUSTOM_GCC_64_BIN
+            USE_CUSTOM_GCC_32
+            CUSTOM_GCC_32_SOURCE
+            CUSTOM_GCC_32_BRANCH
+            CUSTOM_GCC_32_BIN
+            ENABLE_KERNELSU
+            KERNELSU_TAG
+            ADD_KPROBES_CONFIG
+            DISABLE_LTO
+            ADD_OVERLAYFS_CONFIG
+            DISABLE_CC_WERROR
+            APPLY_KSU_PATCH
+            USE_CUSTOM_ANYKERNEL3
+            CUSTOM_ANYKERNEL3_SOURCE
+            CUSTOM_ANYKERNEL3_BRANCH
+            ENABLE_CCACHE
+            NEED_DTBO
+            BUILD_BOOT_IMG
+            SOURCE_BOOT_IMAGE
+            KSU_EXPECTED_SIZE
+            KSU_EXPECTED_HASH
+            REMOVE_UNUSED_PACKAGES
+        )
+
+        for CONFIG in "${CONFIG_LIST[@]}"; do
+            echo "$CONFIG=$(grep -w "$CONFIG" "$CONFIG_ENV" | head -n 1 | cut -d "=" -f 2)" >> $GITHUB_ENV
+        done
+
+    - name: Setup build kernel environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git bc bison flex libssl-dev make libc6-dev libncurses5-dev crossbuild-essential-arm64 unzip curl python3
+        mkdir -p $GITHUB_WORKSPACE/kernel_workspace
+
+    - name: Download kernel source
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace
+        git clone ${{ env.KERNEL_SOURCE }} -b ${{ env.KERNEL_SOURCE_BRANCH }} android-kernel --depth=1
+        cd android-kernel
+        git submodule update --init --recursive
+
+    - name: Setup KernelSU
+      if: env.ENABLE_KERNELSU == 'true'
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s ${{ env.KERNELSU_TAG }}
+
+    - name: Setup Configuration for Kernel
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+
+        if [ "${{ env.APPLY_KSU_PATCH }}" = "true" ]; then
+            echo "CONFIG_KSU=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_CONFIG }}
+        fi
+
+    # ✅ FIXED BUILD STEP
+    - name: Build Kernel
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+
+        echo "Fixing KernelSU broken hooks..."
+
+        # FIX KSU ERRORS
+        find . -type f -exec sed -i 's/ksu_vfs_read_hook/\/\/ksu_vfs_read_hook/g' {} +
+        find . -type f -exec sed -i 's/ksu_input_hook/\/\/ksu_input_hook/g' {} +
+
+        echo "Starting build..."
+
+        export ARCH=${{ env.ARCH }}
+        export SUBARCH=${{ env.ARCH }}
+
+        make ${{ env.KERNEL_CONFIG }}
+        make -j$(nproc)
+
+    - name: Check kernel output
+      run: |
+        if [ -f kernel_workspace/android-kernel/out/arch/${{ env.ARCH }}/boot/${{ env.KERNEL_IMAGE_NAME }} ]; then
+            echo "CHECK_FILE_IS_OK=true" >> $GITHUB_ENV
+        else
+            echo "Kernel output missing"
+            exit 1
+        fi
+
+    - name: Make AnyKernel3
+      if: env.CHECK_FILE_IS_OK == 'true'
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace
+        git clone https://github.com/osm0sis/AnyKernel3 --depth=1 AnyKernel3
+        cp android-kernel/out/arch/${{ env.ARCH }}/boot/${{ env.KERNEL_IMAGE_NAME }} AnyKernel3/
+        rm -rf AnyKernel3/.git*
+
+    - name: Upload Kernel
+      if: env.CHECK_FILE_IS_OK == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel
+        path: kernel_workspace/android-kernel/out/arch/${{ env.ARCH }}/boot/${{ env.KERNEL_IMAGE_NAME }}
+
+    - name: Upload AnyKernel3
+      if: env.CHECK_FILE_IS_OK == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: AnyKernel3
+        path: kernel_workspace/AnyKernel3/*
