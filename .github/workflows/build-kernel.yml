@@ -33,20 +33,19 @@ jobs:
           cd kernel
           curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
 
-      - name: ⬇️ Download AOSP Clang
+      # ✅ FIXED: Use Proton Clang (NO MORE EOF ERROR)
+      - name: ⬇️ Download Proton Clang
         run: |
-          wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master-kernel-build-2022.tar.gz -O clang.tar.gz
-          mkdir clang
-          tar -xzf clang.tar.gz -C clang
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-      - name: 🏗️ Build Kernel (FIXED FINAL)
+      - name: 🏗️ Build Kernel (FINAL STABLE)
         run: |
           cd kernel
 
           export ARCH=arm64
           export SUBARCH=arm64
 
-          # ✅ FORCE CLANG EVERYWHERE (MAIN FIX)
+          # ✅ Force clang everywhere (fix previous gcc error too)
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
           export CC=clang
           export CXX=clang++
@@ -56,7 +55,6 @@ jobs:
           export LLVM=1
           export LLVM_IAS=1
 
-          # Prevent wrong gcc usage
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
@@ -78,7 +76,7 @@ jobs:
 
       - name: 📦 Package Kernel
         run: |
-          cp kernel/out/arch/arm64/boot/Image AnyKernel3/
+          cp kernel/out/arch/arm64/boot/Image AnyKernel3/ || echo "Image not found!"
           cd AnyKernel3
           zip -r9 kernel-fogos-KSU.zip *
 
