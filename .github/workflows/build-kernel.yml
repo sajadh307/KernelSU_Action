@@ -21,6 +21,13 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
           echo "✅ KernelSU-Next integrated"
 
+      - name: Download AOSP Clang (Required for fogos)
+        run: |
+          wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master-kernel-build-2022.tar.gz -O clang.tar.gz
+          mkdir -p clang
+          tar -xzf clang.tar.gz -C clang
+          echo "✅ Clang downloaded"
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -34,7 +41,10 @@ jobs:
       - name: Build Kernel
         working-directory: kernel
         run: |
-          echo "=== Building fogos with KernelSU-Next ==="
+          echo "=== Building fogos with KernelSU-Next + Clang ==="
+          export PATH="$(pwd)/../clang/bin:$PATH"
+          export CC=clang
+          export CLANG_TRIPLE=aarch64-linux-gnu-
           make O=out ARCH=arm64 vendor/genericarmv8-64_defconfig
           make O=out ARCH=arm64 -j$(nproc) Image
 
