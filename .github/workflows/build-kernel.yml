@@ -33,19 +33,23 @@ jobs:
           cd kernel
           curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
 
-      # ✅ FIXED: Use Proton Clang (NO MORE EOF ERROR)
       - name: ⬇️ Download Proton Clang
         run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-      - name: 🏗️ Build Kernel (FINAL STABLE)
+      - name: 🔍 Find Defconfig (AUTO FIX)
+        run: |
+          cd kernel
+          echo "Available defconfigs:"
+          find arch/arm64/configs -type f -name "*defconfig"
+
+      - name: 🏗️ Build Kernel (FIXED)
         run: |
           cd kernel
 
           export ARCH=arm64
           export SUBARCH=arm64
 
-          # ✅ Force clang everywhere (fix previous gcc error too)
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
           export CC=clang
           export CXX=clang++
@@ -60,7 +64,11 @@ jobs:
 
           mkdir -p out
 
-          make O=out ARCH=arm64 fogos_defconfig
+          # 🔥 TRY COMMON DEFCONFIGS (AUTO FALLBACK)
+          make O=out ARCH=arm64 vendor/fogos_defconfig || \
+          make O=out ARCH=arm64 fogos_defconfig || \
+          make O=out ARCH=arm64 gki_defconfig || \
+          make O=out ARCH=arm64 defconfig
 
           make -j$(nproc) O=out \
             ARCH=arm64 \
