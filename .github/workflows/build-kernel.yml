@@ -15,15 +15,13 @@ jobs:
           ref: "15.0"
           path: kernel
 
-      - name: Integrate KernelSU-Next (Fixed)
+      - name: Integrate KernelSU-Next (Reliable method)
         run: |
           cd kernel
-          # Download KernelSU-Next using tarball (more reliable than git clone)
-          curl -L https://github.com/KernelSU-Next/KernelSU-Next/archive/refs/heads/main.tar.gz -o ksu.tar.gz
-          tar -xzf ksu.tar.gz
-          cp -r KernelSU-Next-main/drivers/kernelsu drivers/
-          rm -rf KernelSU-Next-main ksu.tar.gz
-          echo "KernelSU-Next integrated successfully"
+          git clone --depth=1 https://github.com/KernelSU-Next/KernelSU-Next.git kernelsu-next
+          cp -r kernelsu-next/drivers/kernelsu drivers/
+          rm -rf kernelsu-next
+          echo "✅ KernelSU-Next integrated successfully"
 
       - name: Install Dependencies
         run: |
@@ -38,7 +36,7 @@ jobs:
       - name: Build Kernel
         working-directory: kernel
         run: |
-          echo "=== Building fogos with KernelSU-Next ==="
+          echo "=== Building Motorola G45 (fogos) with KernelSU-Next ==="
           make O=out ARCH=arm64 vendor/fogos_defconfig
           make O=out ARCH=arm64 -j$(nproc) Image
 
