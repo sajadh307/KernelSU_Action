@@ -37,7 +37,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-      - name: 🏗️ Build Kernel (FINAL FIX)
+      - name: 🏗️ Build Kernel (FINAL FIX - BTRFS FIXED)
         run: |
           cd kernel
 
@@ -56,16 +56,16 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-          # 🔥 IMPORTANT FIX (prevents hidden failures)
           export KCFLAGS="-Wno-error"
-          export CONFIG_SECTION_MISMATCH_WARN_ONLY=y
 
           mkdir -p out
 
-          # Use working defconfig
           make O=out ARCH=arm64 vendor/fogos_defconfig || make O=out ARCH=arm64 defconfig
 
-          # Enable required KernelSU configs
+          # ✅ FIX: Disable BTRFS (causing your crash)
+          scripts/config --file out/.config -d CONFIG_BTRFS_FS
+
+          # KernelSU required configs
           scripts/config --file out/.config -e CONFIG_KPROBES
           scripts/config --file out/.config -e CONFIG_HAVE_KPROBES
           scripts/config --file out/.config -e CONFIG_KALLSYMS
