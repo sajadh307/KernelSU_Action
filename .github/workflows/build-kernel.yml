@@ -198,10 +198,10 @@ jobs:
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
         cp arch/arm64/configs/vendor/fogos_stock-config arch/arm64/configs/vendor/fogos_defconfig
         sed -i 's/$(error Moto DT w\/o overlay is undefined!!!)/$(warning Moto DT w\/o overlay is undefined!!!)/' arch/arm64/boot/dts/vendor/qcom/Makefile
-        ls KernelSU/kernel/ || echo "KernelSU folder empty"
-        ls drivers/kernelsu/ || echo "No drivers/kernelsu"
-      
-        find . -name "app_profile.h" 2>/dev/null | head -5
+        echo "=== KernelSU folder ===" && ls KernelSU/kernel/ || echo "KernelSU folder empty"
+        echo "=== drivers/kernelsu ===" && ls drivers/kernelsu/ || echo "No drivers/kernelsu"
+        echo "=== app_profile.h location ===" && find . -name "app_profile.h" 2>/dev/null | head -5
+
     - name: Setup KernelSU
       if: env.ENABLE_KERNELSU == 'true'
       run: |
