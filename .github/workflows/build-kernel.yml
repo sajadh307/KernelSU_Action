@@ -1,4 +1,4 @@
-name: Build Kernel for Motorola G45 (fogos) - KernelSU-Next + SuSFS Ready
+name: Build Kernel for Motorola G45 (fogos) - KernelSU-Next
 
 on:
   workflow_dispatch:
@@ -15,12 +15,14 @@ jobs:
           ref: "15.0"
           path: kernel
 
-      - name: Integrate KernelSU-Next
+      - name: Integrate KernelSU-Next (Fixed)
         run: |
           cd kernel
-          git clone --depth=1 https://github.com/KernelSU-Next/KernelSU.git kernelsu-next
-          cp -r kernelsu-next/drivers/kernelsu drivers/
-          rm -rf kernelsu-next
+          # Download KernelSU-Next using tarball (more reliable than git clone)
+          curl -L https://github.com/KernelSU-Next/KernelSU-Next/archive/refs/heads/main.tar.gz -o ksu.tar.gz
+          tar -xzf ksu.tar.gz
+          cp -r KernelSU-Next-main/drivers/kernelsu drivers/
+          rm -rf KernelSU-Next-main ksu.tar.gz
           echo "KernelSU-Next integrated successfully"
 
       - name: Install Dependencies
