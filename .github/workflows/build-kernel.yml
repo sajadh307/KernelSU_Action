@@ -21,14 +21,6 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
           echo "✅ KernelSU-Next integrated"
 
-      - name: Debug - Show available defconfigs
-        run: |
-          cd kernel
-          echo "=== Files in arch/arm64/configs ==="
-          ls -la arch/arm64/configs/
-          echo "=== Files in vendor folder (if exists) ==="
-          ls -la arch/arm64/configs/vendor/ 2>/dev/null || echo "No vendor folder found"
-
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -42,8 +34,8 @@ jobs:
       - name: Build Kernel
         working-directory: kernel
         run: |
-          echo "=== Building with KernelSU-Next ==="
-          make O=out ARCH=arm64 vendor/fogos_defconfig   # ← we will change this after seeing debug
+          echo "=== Building fogos with KernelSU-Next ==="
+          make O=out ARCH=arm64 vendor/genericarmv8-64_defconfig
           make O=out ARCH=arm64 -j$(nproc) Image
 
       - name: Package with AnyKernel3
