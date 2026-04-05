@@ -37,7 +37,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/kdrag0n/proton-clang.git clang
 
-      - name: 🏗️ Build Kernel (FINAL FS FIX)
+      - name: 🏗️ Build Kernel (REAL FINAL FIX)
         run: |
           cd kernel
 
@@ -63,19 +63,8 @@ jobs:
 
           make O=out ARCH=arm64 vendor/fogos_defconfig || make O=out ARCH=arm64 defconfig
 
-          # 🔥 CRITICAL FIXES
-
-          # Disable problematic filesystems
+          # Disable problematic configs
           scripts/config --file out/.config -d CONFIG_BTRFS_FS
-          scripts/config --file out/.config -d CONFIG_NFS_FS
-          scripts/config --file out/.config -d CONFIG_LOCKD
-          scripts/config --file out/.config -d CONFIG_NFSD
-
-          # Stabilize EXT4
-          scripts/config --file out/.config -e CONFIG_EXT4_FS
-          scripts/config --file out/.config -d CONFIG_EXT4_DEBUG
-
-          # Disable debug / breaking features
           scripts/config --file out/.config -d CONFIG_DEBUG_INFO
           scripts/config --file out/.config -d CONFIG_DEBUG_INFO_BTF
           scripts/config --file out/.config -d CONFIG_LTO
@@ -90,13 +79,15 @@ jobs:
 
           make O=out ARCH=arm64 olddefconfig
 
+          # 🔥 CRITICAL FIX: Build proper targets
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CC=clang \
             HOSTCC=clang \
             HOSTCXX=clang++ \
             LLVM=1 \
-            LLVM_IAS=1
+            LLVM_IAS=1 \
+            Image.gz dtbs
 
       - name: 📦 Clone AnyKernel3
         run: |
@@ -104,7 +95,7 @@ jobs:
 
       - name: 📦 Package Kernel
         run: |
-          cp kernel/out/arch/arm64/boot/Image AnyKernel3/ || echo "Image not found!"
+          cp kernel/out/arch/arm64/boot/Image.gz AnyKernel3/ || echo "Image.gz not found!"
           cd AnyKernel3
           zip -r9 kernel-fogos-KSU.zip *
 
