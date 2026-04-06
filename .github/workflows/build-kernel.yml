@@ -1,4 +1,4 @@
-name: Build Kernel for Motorola G45 (fogos) - KernelSU-Next (FINAL SUCCESS FIXED)
+name: Build Kernel (STABLE FINAL)
 
 on:
   workflow_dispatch:
@@ -20,16 +20,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential bc bison flex libssl-dev libelf-dev \
-            git ccache dwarves python3 rsync curl wget \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
-            clang lld
+            git python3 rsync
 
-      - name: 🔗 Integrate KernelSU-Next
+      - name: 🔗 Integrate KernelSU
         run: |
           cd kernel
-          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+          curl -LSs https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh | bash -
 
-      - name: 🏗️ Build Kernel (FINAL REAL FIX)
+      - name: 🏗️ Build Kernel (SAFE MODE)
         run: |
           cd kernel
 
@@ -39,39 +38,26 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-          export CC=clang
-          export LD=ld.lld
-
           mkdir -p out
 
-          make O=out ARCH=arm64 vendor/fogos_defconfig || make O=out ARCH=arm64 defconfig
+          # ✅ use EXACT vendor config (no guessing)
+          make O=out ARCH=arm64 vendor/fogos_defconfig
 
-          # 🔥 CRITICAL FINAL FIX
-          scripts/config --file out/.config -d CONFIG_DEBUG_INFO
-          scripts/config --file out/.config -d CONFIG_DEBUG_INFO_DWARF4
-          scripts/config --file out/.config -d CONFIG_DEBUG_INFO_BTF
-
-          make O=out ARCH=arm64 olddefconfig
-
+          # ✅ build normally (NO flags)
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
-            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
-            CC=clang \
-            LD=ld.lld
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-      - name: 📦 Clone AnyKernel3
+      - name: 📦 Package
         run: |
           git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
-
-      - name: 📦 Package Kernel
-        run: |
-          cp kernel/out/arch/arm64/boot/Image.gz AnyKernel3/ || echo "Image.gz not found!"
+          cp kernel/out/arch/arm64/boot/Image.gz AnyKernel3/ || true
           cd AnyKernel3
-          zip -r9 kernel-fogos-KSU.zip *
+          zip -r9 kernel.zip *
 
-      - name: 📤 Upload Artifact
+      - name: 📤 Upload
         uses: actions/upload-artifact@v4
         with:
-          name: fogos-kernel-KSU
-          path: AnyKernel3/kernel-fogos-KSU.zip
+          name: kernel
+          path: AnyKernel3/kernel.zip
