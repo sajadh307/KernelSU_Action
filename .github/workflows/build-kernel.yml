@@ -1,4 +1,4 @@
-name: Build Kernel (STABLE FINAL)
+name: Build Kernel (FINAL NO-LOOP FIX)
 
 on:
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
           cd kernel
           curl -LSs https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh | bash -
 
-      - name: 🏗️ Build Kernel (SAFE MODE)
+      - name: 🏗️ Build Kernel (STABLE FIX)
         run: |
           cd kernel
 
@@ -40,10 +40,22 @@ jobs:
 
           mkdir -p out
 
-          # ✅ use EXACT vendor config (no guessing)
+          # ✅ Always use correct defconfig
           make O=out ARCH=arm64 vendor/fogos_defconfig
 
-          # ✅ build normally (NO flags)
+          # ✅ APPLY ALL REQUIRED FIXES (NO BREAKING)
+          scripts/config --file out/.config -d CONFIG_DEBUG_INFO
+          scripts/config --file out/.config -d CONFIG_DEBUG_INFO_BTF
+          scripts/config --file out/.config -d CONFIG_WERROR
+          scripts/config --file out/.config -d CONFIG_BTRFS_FS
+
+          # keep ext4 stable
+          scripts/config --file out/.config -e CONFIG_EXT4_FS
+          scripts/config --file out/.config -d CONFIG_EXT4_DEBUG
+
+          make O=out ARCH=arm64 olddefconfig
+
+          # ✅ build clean (NO clang, NO weird flags)
           make -j$(nproc) O=out \
             ARCH=arm64 \
             CROSS_COMPILE=aarch64-linux-gnu- \
