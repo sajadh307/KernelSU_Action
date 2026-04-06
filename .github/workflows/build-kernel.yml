@@ -1,4 +1,4 @@
-name: Build Kernel (FINAL FIXED)
+name: Build Kernel (FIX KERNELSU ERROR)
 
 on:
   workflow_dispatch:
@@ -23,13 +23,18 @@ jobs:
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
             git python3 rsync curl
 
-      # ✅ USE STABLE KernelSU (IMPORTANT)
-      - name: 🔗 Integrate KernelSU
+      # 🔥 FIX: Proper KernelSU integration
+      - name: 🔗 Integrate KernelSU (FORCE FIX)
         run: |
           cd kernel
-          curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -
 
-      - name: 🏗️ Build Kernel (FINAL STABLE)
+          # clean any broken state
+          rm -rf drivers/kernelsu
+
+          # clone KernelSU directly (reliable method)
+          git clone https://github.com/tiann/KernelSU.git drivers/kernelsu
+
+      - name: 🏗️ Build Kernel
         run: |
           cd kernel
 
@@ -43,7 +48,7 @@ jobs:
 
           make O=out ARCH=arm64 vendor/fogos_defconfig
 
-          # 🔥 CRITICAL FIXES (minimal but required)
+          # disable breaking configs
           scripts/config --file out/.config -d CONFIG_DEBUG_INFO
           scripts/config --file out/.config -d CONFIG_DEBUG_INFO_BTF
           scripts/config --file out/.config -d CONFIG_WERROR
@@ -55,15 +60,15 @@ jobs:
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-      - name: 📦 Package Kernel
+      - name: 📦 Package
         run: |
           git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
           cp kernel/out/arch/arm64/boot/Image.gz AnyKernel3/ || true
           cd AnyKernel3
           zip -r9 kernel.zip *
 
-      - name: 📤 Upload Artifact
+      - name: 📤 Upload
         uses: actions/upload-artifact@v4
         with:
-          name: fogos-kernel
+          name: kernel
           path: AnyKernel3/kernel.zip
