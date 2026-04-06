@@ -1,4 +1,4 @@
-name: Build Kernel (FINAL REAL FIX)
+name: Build Kernel (FINAL FIXED)
 
 on:
   workflow_dispatch:
@@ -23,13 +23,13 @@ jobs:
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
             git python3 rsync curl
 
-      # 🔥 FIX: Use STABLE KernelSU (NOT next)
-      - name: 🔗 Integrate KernelSU (STABLE)
+      # ✅ USE STABLE KernelSU (IMPORTANT)
+      - name: 🔗 Integrate KernelSU
         run: |
           cd kernel
           curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -
 
-      - name: 🏗️ Build Kernel
+      - name: 🏗️ Build Kernel (FINAL STABLE)
         run: |
           cd kernel
 
@@ -43,7 +43,7 @@ jobs:
 
           make O=out ARCH=arm64 vendor/fogos_defconfig
 
-          # minimal safe fixes (NOT aggressive)
+          # 🔥 CRITICAL FIXES (minimal but required)
           scripts/config --file out/.config -d CONFIG_DEBUG_INFO
           scripts/config --file out/.config -d CONFIG_DEBUG_INFO_BTF
           scripts/config --file out/.config -d CONFIG_WERROR
@@ -55,15 +55,15 @@ jobs:
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
-      - name: 📦 Package
+      - name: 📦 Package Kernel
         run: |
           git clone https://github.com/osm0sis/AnyKernel3.git AnyKernel3
           cp kernel/out/arch/arm64/boot/Image.gz AnyKernel3/ || true
           cd AnyKernel3
           zip -r9 kernel.zip *
 
-      - name: 📤 Upload
+      - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kernel
+          name: fogos-kernel
           path: AnyKernel3/kernel.zip
